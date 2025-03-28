@@ -5,7 +5,7 @@ import matplotlib.patches as patches
 
 st.set_page_config(
     page_title="Pile Simulation",
-    page_icon="🪨",  # or "assets/icon.png" if you have a custom image
+    page_icon="assets/icon.png",
     layout="wide"
 )
 
@@ -376,7 +376,7 @@ def plot_grade_matrix(sim, deposit_ratio_choice):
     fig_mean, ax_mean = plt.subplots(figsize=(9.5, 2))
     ax_mean.plot(segment_indices, column_means, color='blue', marker='o')
     ax_mean.set_xticks(np.arange(0, len(segment_indices), 1))
-    ax_mean.set_xticklabels(np.arange(10, 10 * (len(segment_indices) + 1), 10))
+    ax_mean.set_xticklabels(np.arange(10, 10 * (len(segment_indices) + 1), 10), fontsize=10)
     # ax_mean.set_title("Mean Grade per Segment")
     ax_mean.set_xlabel("Pile Segment (m)")
     ax_mean.set_ylabel("Mean Grade (%)")
@@ -387,7 +387,7 @@ def plot_grade_matrix(sim, deposit_ratio_choice):
     fig_std, ax_std = plt.subplots(figsize=(10, 2))
     ax_std.plot(segment_indices, column_stds, color='red', marker='x', linestyle='--')
     ax_std.set_xticks(np.arange(0, len(segment_indices), 1))
-    ax_std.set_xticklabels(np.arange(10, 10 * (len(segment_indices) + 1), 10))
+    ax_std.set_xticklabels(np.arange(10, 10 * (len(segment_indices) + 1), 10), fontsize=10)
     # ax_std.set_title("Standard Deviation per Segment")
     ax_std.set_xlabel("Pile Segment (m)")
     ax_std.set_ylabel("Standard Deviation")
@@ -437,6 +437,7 @@ def main():
         sim.add_material_section(sim.truck_payload, source)
 
     # --- Display plots ---
+
     # st.subheader("Final Pile Cross-Section")
     # st.pyplot(plot_final_pile(sim, deposit_ratio_choice))
 
@@ -480,6 +481,25 @@ def main():
 
         with col2:
             st.metric("Pre-Homo Pile Std Dev", f"{np.std(deposit_values):.2f}")
+    st.markdown(" ")
+    st.markdown("---")
+    st.markdown(" ")
+    image1, image2 = st.columns(2)
+
+    with image1:
+        st.subheader("Chevron Stacking Layout")
+
+        st.image("assets/chevron.png", use_container_width=True)
+        st.markdown(
+            "Chevron stacking involves the formation of a central ridge along the stockpile length. "
+            "The stacker then reverses direction and deposits successive layers at a higher elevation, "
+            "achieving vertical build-up with alternating passes."
+        )
+
+    with image2:
+        st.subheader("Stacker - Sequential Layer Formation")
+        st.image("assets/pre_homo_pile.gif", use_container_width=True)
+
 
 if __name__ == "__main__":
     main()
