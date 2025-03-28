@@ -167,8 +167,8 @@ def get_deposit_pattern_truck(ore_grades, deposit_ratio_choice):
     """
     Returns a deposit pattern list for the truck process.
     For two ore grades:
-        "1:1" returns ['B', 'A']
-        "2:1" returns ['B', 'B', 'A']
+        "1:1" returns ['A', 'B']
+        "2:1" returns ['A', 'A', 'B']
     For three ore grades:
         "1:1:1" returns [lowest, middle, highest]
         "2:1:1" returns [lowest, lowest, middle, highest]
@@ -176,18 +176,18 @@ def get_deposit_pattern_truck(ore_grades, deposit_ratio_choice):
     keys = list(ore_grades.keys())
     if len(keys) == 2:
         if deposit_ratio_choice == "1:1":
-            return ['B', 'A']
+            return ['A', 'B']
         elif deposit_ratio_choice == "2:1":
-            return ['B', 'B', 'A']
+            return ['A', 'A', 'B']
         else:
-            return ['B', 'A']
+            return ['A', 'B']
     elif len(keys) == 3:
         # Sort keys in increasing order of ore grade value
-        sorted_keys = sorted(ore_grades, key=lambda k: ore_grades[k])
+        sorted_keys = ['A', 'B', 'C']
         if deposit_ratio_choice == "1:1:1":
             return sorted_keys
         elif deposit_ratio_choice == "2:1:1":
-            return [sorted_keys[0], sorted_keys[0]] + sorted_keys[1:]
+            return ['A', 'A', 'B', 'C']
         else:
             return sorted_keys
     else:
@@ -210,30 +210,6 @@ def truck_process(env, sim, deposit_pattern):
         deposit_index = (deposit_index + 1) % pattern_length
         sim.add_material_section(sim.truck_payload, source)
         yield env.timeout(truck_interval_seconds)
-
-def run_simulation(
-    pile_length, stacker_velocity, production_rate, total_weight, truck_payload,
-    ore_grades, deposit_ratio_choice
-):
-    """
-    Runs the SimPy simulation, returns the simulation object.
-    """
-    sim = PreHomogenizationPileSimulation(
-        pile_length=pile_length,
-        stacker_velocity=stacker_velocity,
-        production_rate=production_rate,
-        total_weight=total_weight,
-        truck_payload=truck_payload,
-        ore_grades=ore_grades
-    )
-    
-    deposit_pattern_truck = get_deposit_pattern_truck(ore_grades, deposit_ratio_choice)
-    
-    env = simpy.Environment()
-    env.process(truck_process(env, sim, deposit_pattern_truck))
-    env.run()
-    
-    return sim
 
 # ----------------------------------------------------
 # Plotting Functions
@@ -321,30 +297,30 @@ def plot_grade_matrix(sim, deposit_ratio_choice):
     # Build numeric pattern based on grade values
     if len(keys) == 2:
         if deposit_ratio_choice == "1:1":
-            pattern = [sim.ore_grades['B']] * 3 + [sim.ore_grades['A']] * 3
+            pattern = [sim.ore_grades['A']] * 3 + [sim.ore_grades['B']] * 3
         elif deposit_ratio_choice == "2:1":
-            pattern = [sim.ore_grades['B']] * 6 + [sim.ore_grades['A']] * 3
+            pattern = [sim.ore_grades['A']] * 6 + [sim.ore_grades['B']] * 3
         else:
-            pattern = [sim.ore_grades['B']] * 3 + [sim.ore_grades['A']] * 3
+            pattern = [sim.ore_grades['A']] * 3 + [sim.ore_grades['B']] * 3
     elif len(keys) == 3:
-        sorted_keys = sorted(sim.ore_grades, key=lambda k: sim.ore_grades[k])
+        # sorted_keys = sorted(sim.ore_grades, key=lambda k: sim.ore_grades[k])
         if deposit_ratio_choice == "1:1:1":
             pattern = (
-                [sim.ore_grades[sorted_keys[0]]] * 3 +
-                [sim.ore_grades[sorted_keys[1]]] * 3 +
-                [sim.ore_grades[sorted_keys[2]]] * 3
+                [sim.ore_grades['A']] * 3 +
+                [sim.ore_grades['B']] * 3 +
+                [sim.ore_grades['C']] * 3
             )
         elif deposit_ratio_choice == "2:1:1":
             pattern = (
-                [sim.ore_grades[sorted_keys[0]]] * 6 +
-                [sim.ore_grades[sorted_keys[1]]] * 3 +
-                [sim.ore_grades[sorted_keys[2]]] * 3
+                [sim.ore_grades['A']] * 6 +
+                [sim.ore_grades['B']] * 3 +
+                [sim.ore_grades['C']] * 3
             )
         else:
             pattern = (
-                [sim.ore_grades[sorted_keys[0]]] * 3 +
-                [sim.ore_grades[sorted_keys[1]]] * 3 +
-                [sim.ore_grades[sorted_keys[2]]] * 3
+                [sim.ore_grades['A']] * 6 +
+                [sim.ore_grades['B']] * 3 +
+                [sim.ore_grades['C']] * 3
             )
     else:
         pattern = []
@@ -464,7 +440,7 @@ def main():
         st.pyplot(plot_final_pile(sim, deposit_ratio_choice))
 
     with col_metrics:
-        st.subheader("Statistics")
+        st.subheader("Reclaiming Grade Statistics")
         st.subheader("Grade Distribution: Mean Grade per Segment")
         st.pyplot(fig_mean)
 
