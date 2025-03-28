@@ -17,12 +17,19 @@ venv/
 .DS_Store
 Thumbs.db
 
-# User-generated files (optional)
+# Ignore images globally
 *.mp4
 *.png
 *.jpg
 *.jpeg
 *.gif
+
+# EXCEPTION: Allow tracked images in the assets folder
+!assets/*.png
+!assets/*.gif
+!assets/*.jpg
+!assets/*.jpeg
+!assets/*.mp4
 
 # Logs
 *.log
