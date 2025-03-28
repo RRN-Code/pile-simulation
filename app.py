@@ -2,7 +2,12 @@ import streamlit as st
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
-st.set_page_config(layout="wide")
+
+st.set_page_config(
+    page_title="Pile Simulation",
+    page_icon="🪨",  # or "assets/icon.png" if you have a custom image
+    layout="wide"
+)
 
 # ---------------------------------------------
 # Class Definition: PreHomogenizationPileSimulation
