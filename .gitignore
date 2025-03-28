@@ -1,0 +1,33 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*.so
+
+# Virtual environment
+venv/
+.env
+
+# Streamlit cache
+.streamlit/
+
+# Jupyter Notebook checkpoints (if using notebooks)
+.ipynb_checkpoints/
+
+# MacOS & system files
+.DS_Store
+Thumbs.db
+
+# User-generated files (optional)
+*.mp4
+*.png
+*.jpg
+*.jpeg
+*.gif
+
+# Logs
+*.log
+
+# IDE/editor config
+.vscode/
+*.code-workspace
+.idea/
