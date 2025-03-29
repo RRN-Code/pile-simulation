@@ -214,7 +214,7 @@ def truck_process(env, sim, deposit_pattern):
 # ----------------------------------------------------
 # Plotting Functions
 # ----------------------------------------------------
-def plot_final_pile(sim, deposit_ratio_choice):
+def plot_final_pile(sim, deposit_ratio_choice, variabilities):
     """
     Plot the final cross-section of the pile using Matplotlib,
     returning the figure object for Streamlit.
@@ -261,11 +261,16 @@ def plot_final_pile(sim, deposit_ratio_choice):
     for x_line in range(0, int(sim.pile_length)+1, 10):
         ax.axvline(x=x_line, color='gray', linestyle='--', alpha=0.5)
     
-    # Legend for sources
-    handles = [patches.Patch(color=color_map[s], label=f"Source {s} (Grade: {sim.ore_grades[s]}%)") 
-               for s in sim.ore_grades]
+
+    # Legend for sources with variability
+    handles = [
+        patches.Patch(
+            color=color_map[s],
+            label=f"Source {s} (Grade: {sim.ore_grades[s]}%, Var: {variabilities.get(s, 0)}%)"
+        )
+        for s in sim.ore_grades
+    ]
     ax.legend(handles=handles, loc='upper right')
-    
     # Parameter text
     param_text = (
         f"Pile Length: {sim.pile_length} m\n"
@@ -282,7 +287,7 @@ def plot_final_pile(sim, deposit_ratio_choice):
     fig.tight_layout()
     return fig
 
-def plot_grade_matrix(sim, deposit_ratio_choice):
+def plot_grade_matrix(sim, deposit_ratio_choice, variabilities):
     """
     Returns two separate plots: one for mean grade, one for standard deviation per segment.
     """
@@ -331,6 +336,27 @@ def plot_grade_matrix(sim, deposit_ratio_choice):
     deposit_values = (pattern * repeats)[:total_cells]
     deposit_values = np.array(deposit_values)[::-1]
 
+    # Retrieve the default grade values from the simulation object
+    default_grade_A = sim.ore_grades['A']
+    default_grade_B = sim.ore_grades['B']
+
+    # # Use np.isclose for robust floating point comparison
+    # mask_A = np.isclose(deposit_values, default_grade_A)
+    # deposit_values[mask_A] = deposit_values[mask_A] * np.random.uniform(0.9, 1.1, size=mask_A.sum())
+
+    # mask_B = np.isclose(deposit_values, default_grade_B)
+    # deposit_values[mask_B] = deposit_values[mask_B] * np.random.uniform(0.95, 1.05, size=mask_B.sum())
+
+    # Apply variability if defined
+    for source, default_grade in sim.ore_grades.items():
+        variability = variabilities.get(source, 0.0)  # in percent
+
+        if variability > 0:
+            lower = 1.0 - variability / 100.0
+            upper = 1.0 + variability / 100.0
+            mask = np.isclose(deposit_values, default_grade)
+            deposit_values[mask] = deposit_values[mask] * np.random.uniform(lower, upper, size=mask.sum())
+
     grade_matrix = np.full((num_layers, num_segments), np.nan)
     coords = []
     for r in range(num_layers):
@@ -356,7 +382,7 @@ def plot_grade_matrix(sim, deposit_ratio_choice):
     # ax_mean.set_title("Mean Grade per Segment")
     ax_mean.set_xlabel("Pile Segment (m)")
     ax_mean.set_ylabel("Mean Grade (%)")
-    # ax_mean.set_ylim(0, 100)
+    ax_mean.set_ylim(bottom=max(0, min(column_means) * 0.67), top=max(column_means) * 1.5)
     ax_mean.grid(True, linestyle='--', alpha=0.3)
 
     # --- Plot 2: Standard Deviation ---
@@ -366,10 +392,11 @@ def plot_grade_matrix(sim, deposit_ratio_choice):
     ax_std.set_xticklabels(np.arange(10, 10 * (len(segment_indices) + 1), 10), fontsize=10)
     # ax_std.set_title("Standard Deviation per Segment")
     ax_std.set_xlabel("Pile Segment (m)")
-    ax_std.set_ylabel("Standard Deviation")
+    ax_std.set_ylabel("Standard Deviation (%)")
+    ax_std.set_ylim(bottom=max(0, min(column_stds) * 0.67), top=max(column_stds) * 1.5)
     ax_std.grid(True, linestyle='--', alpha=0.3)
 
-    return fig_mean, fig_std, deposit_values
+    return fig_mean, fig_std, deposit_values, grade_matrix, column_means
 
 
 # ----------------------------------------------------
@@ -381,28 +408,42 @@ def main():
 
     # --- Sidebar inputs ---
     st.sidebar.markdown("### Basic Parameters")
-    pile_length = st.sidebar.number_input("Pile Length (m)", value=100.0, min_value=10.0, step=10.0, max_value=200.0)
-    stacker_velocity = st.sidebar.number_input("Stacker Velocity (m/min)", value=10.0, min_value=1.0, step=1.0, max_value=20.0)
-    production_rate = st.sidebar.number_input("Production Rate (tons/hour)", value=600.0, min_value=300.0, step=10.0, max_value=900.0)
-    total_weight = st.sidebar.number_input("Total Material (tons)", value=900.0, min_value=90.0, step=10.0, max_value=9000.0)
-    truck_payload = st.sidebar.number_input("Truck Payload (tons)", value=30.0, min_value=20.0, step=10.0, max_value=60.0)
+    pile_length = st.sidebar.slider("Pile Length (m)", min_value=100.0, max_value=300.0, value=100.0, step=10.0)
+    stacker_velocity = st.sidebar.slider("Stacker Velocity (m/min)", min_value=1.0, max_value=20.0, value=10.0, step=1.0)
+    production_rate = st.sidebar.slider("Production Rate (tons/hour)", min_value=300.0, max_value=900.0, value=600.0, step=100.0)
+    total_weight = st.sidebar.slider("Total Material (tons)", min_value=900.0, max_value=9000.0, value=900.0, step=100.0)
+    truck_payload = st.sidebar.slider("Truck Payload (tons)", min_value=20.0, max_value=60.0, value=30.0, step=10.0)
 
+    # --- Ore Source Grades and Variabilities ---
     st.sidebar.markdown("### Ore Source Zones")
     grade_option = st.sidebar.radio("Number of ore sources feeding the pile", ["2 Sources", "3 Sources"])
 
     if grade_option == "2 Sources":
-        grade_a = st.sidebar.number_input("Grade A (%)", value=60.0, min_value=1.0, step=1.0, max_value=99.0)
-        grade_b = st.sidebar.number_input("Grade B (%)", value=40.0, min_value=1.0, step=1.0, max_value=99.0)
+        grade_a = st.sidebar.slider("Grade A (%)", min_value=1.0, max_value=50.0, value=30.0, step=1.0)
+        var_a = st.sidebar.slider("Absolute Deviation A (%)", min_value=0.0, max_value=50.0, value=0.0, step=1.0)
+
+        grade_b = st.sidebar.slider("Grade B (%)", min_value=1.0, max_value=50.0, value=20.0, step=1.0)
+        var_b = st.sidebar.slider("Absolute Deviation B (%)", min_value=0.0, max_value=50.0, value=0.0, step=1.0)
+
         ore_grades = {'A': grade_a, 'B': grade_b}
+        variabilities = {'A': var_a, 'B': var_b}
         deposit_ratio_choice = st.sidebar.selectbox("Deposit Ratio", ["1:1", "2:1"])
+
     else:
-        grade_a = st.sidebar.number_input("Grade A (%)", value=60.0, min_value=1.0, step=1.0, max_value=99.0)
-        grade_b = st.sidebar.number_input("Grade B (%)", value=40.0, min_value=1.0, step=1.0, max_value=99.0)
-        grade_c = st.sidebar.number_input("Grade C (%)", value=20.0, min_value=1.0, step=1.0, max_value=99.0)
+        grade_a = st.sidebar.slider("Grade A (%)", min_value=1.0, max_value=50.0, value=30.0, step=1.0)
+        var_a = st.sidebar.slider("Absolute Deviation A (%)", min_value=0.0, max_value=50.0, value=0.0, step=1.0)
+
+        grade_b = st.sidebar.slider("Grade B (%)", min_value=1.0, max_value=50.0, value=20.0, step=1.0)
+        var_b = st.sidebar.slider("Absolute Deviation B (%)", min_value=0.0, max_value=50.0, value=0.0, step=1.0)
+
+        grade_c = st.sidebar.slider("Grade C (%)", min_value=1.0, max_value=50.0, value=10.0, step=1.0)
+        var_c = st.sidebar.slider("Absolute Deviation C (%)", min_value=0.0, max_value=50.0, value=0.0, step=1.0)
+
         ore_grades = {'A': grade_a, 'B': grade_b, 'C': grade_c}
+        variabilities = {'A': var_a, 'B': var_b, 'C': var_c}
         deposit_ratio_choice = st.sidebar.selectbox("Deposit Ratio", ["1:1:1", "2:1:1"])
 
-    # --- Run simulation with current values ---
+    # --- Run simulation ---
     deposit_pattern_truck = get_deposit_pattern_truck(ore_grades, deposit_ratio_choice)
     sim = PreHomogenizationPileSimulation(
         pile_length, stacker_velocity, production_rate,
@@ -412,70 +453,57 @@ def main():
     for source in deposit_pattern_truck * int(sim.total_weight // sim.truck_payload):
         sim.add_material_section(sim.truck_payload, source)
 
-    # --- Display plots ---
-
-    # st.subheader("Final Pile Cross-Section")
-    # st.pyplot(plot_final_pile(sim, deposit_ratio_choice))
-
-    # st.subheader("Grade Distribution: Mean Grade per Segment")
-    fig_mean, fig_std, deposit_values = plot_grade_matrix(sim, deposit_ratio_choice)
+    # --- Display plots and metrics ---
+    fig_mean, fig_std, deposit_values, grade_matrix, column_means = plot_grade_matrix(sim, deposit_ratio_choice, variabilities)
 
 
-    # st.subheader("Grade Distribution: Mean Grade per Segment")
-    # st.pyplot(fig_mean)
 
-    # st.subheader("Grade Distribution: Standard Deviation per Segment")
-    # st.pyplot(fig_std)
-
-    # col1, col2 = st.columns(2)
-
-    # col1.metric("Pre-Homo Pile Mean (%)", f"{np.mean(deposit_values):.2f}")
-    # col2.metric("Pre-Homo Pile Std Dev", f"{np.std(deposit_values):.2f}")
-
-    col_plot, col_metrics = st.columns(2)  # Wider plot, narrower metrics
+    col_plot, col_metrics = st.columns(2)
 
     with col_plot:
-        st.subheader("Longitudinal Section")
-        st.markdown("")
-        st.pyplot(plot_final_pile(sim, deposit_ratio_choice))
+        st.subheader("Stacking: Longitudinal Section")
+        st.pyplot(plot_final_pile(sim, deposit_ratio_choice, variabilities))
+
 
     with col_metrics:
-        st.subheader("Reclaiming Grade Statistics")
-        st.subheader("Grade Distribution: Mean Grade per Segment")
+        st.subheader("Reclaiming: Segment Statistics")
         st.pyplot(fig_mean)
-
-        st.subheader("Grade Distribution: Standard Deviation per Segment")
         st.pyplot(fig_std)
 
-        mean_val = np.mean(deposit_values)
-        std_val = np.std(deposit_values)
+        mean_val = np.mean(column_means)
+        std_val = np.std(column_means)
 
-        spacer1, col1, spacer2, col2, spacer3 = st.columns([1, 1, 1, 1, 1])  # Adjust the ratios as needed
-
+        st.subheader("Reclaiming: Overall Performance")
+        space1, col1, space2, col2, space3 = st.columns([2, 1, 1, 1, 1])
+        
         with col1:
-            st.metric("Pre-Homo Pile Mean (%)", f"{np.mean(deposit_values):.2f}")
-
+            st.markdown(" ")
+            st.metric("Mean Grade (%)", f"{mean_val:.2f}")
         with col2:
-            st.metric("Pre-Homo Pile Std Dev", f"{np.std(deposit_values):.2f}")
-    st.markdown(" ")
+            st.markdown(" ")
+            st.metric("Std Dev (%)", f"{std_val:.2f}")
+
     st.markdown("---")
-    st.markdown(" ")
+
     image1, image2 = st.columns(2)
-
     with image1:
-        st.subheader("Chevron Stacking Layout")
-
+        st.subheader("Chevron Stacking/Reclaiming Layout")
         st.image("assets/chevron.png", use_container_width=True)
         st.markdown(
-            "Chevron stacking involves the formation of a central ridge along the stockpile length. "
-            "The stacker then reverses direction and deposits successive layers at a higher elevation, "
-            "achieving vertical build-up with alternating passes."
+            "Chevron stacking forms a central ridge. The stacker reverses direction to build layers upward, "
+            "achieving vertical buildup with alternating passes."
         )
 
     with image2:
         st.subheader("Stacker - Sequential Layer Formation")
         st.image("assets/pre_homo_pile.gif", use_container_width=True)
 
+
+    # st.markdown("---")
+
+    # st.markdown("Grade Matrix (First 10 layers at the bottom)")
+    # st.dataframe(grade_matrix[:10])
+    # st.dataframe(grade_matrix[-10:])
 
 if __name__ == "__main__":
     main()
