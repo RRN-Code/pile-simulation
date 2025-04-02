@@ -10,6 +10,35 @@ st.set_page_config(
     layout="wide"
 )
 
+# -------------------------------------------
+# Simple Authentication
+# -------------------------------------------
+def login():
+    st.markdown("<br><br><br><br>", unsafe_allow_html=True)
+
+    col1, col2, col3 = st.columns([1, 1, 1])
+
+    with col2:
+        with st.form("login_form"):
+            st.subheader("🔒 Login Required")
+            username = st.text_input("Username")
+            password = st.text_input("Password", type="password")
+            submit = st.form_submit_button("Login")
+
+            if submit:
+                # Read credentials from secrets.toml
+                stored_username = st.secrets["auth"]["username"]
+                stored_password = st.secrets["auth"]["password"]
+
+                if username == stored_username and password == stored_password:
+                    st.session_state.logged_in = True
+                    st.success("Login successful! ✅")
+                    st.rerun()
+                else:
+                    st.error("Invalid username or password ❌")
+
+
+
 # ----------------------------------------------------
 # Streamlit App
 # ----------------------------------------------------
@@ -112,5 +141,9 @@ def main():
     # st.dataframe(grade_matrix[:10])
     # st.dataframe(grade_matrix[-10:])
 
+
 if __name__ == "__main__":
-    main()
+    if "logged_in" not in st.session_state or not st.session_state.logged_in:
+        login()
+    else:
+        main()

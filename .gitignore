@@ -7,24 +7,29 @@ __pycache__/
 venv/
 .env
 
-# Streamlit cache
+# Streamlit
 .streamlit/
+.streamlit/secrets.toml
 
-# Jupyter Notebook checkpoints (if using notebooks)
+# Jupyter Notebook checkpoints
 .ipynb_checkpoints/
 
-# MacOS & system files
+# Test and static analysis caches
+.pytest_cache/
+.mypy_cache/
+
+# OS & system files
 .DS_Store
 Thumbs.db
 
-# Ignore images globally
+# Media files (ignore globally)
 *.mp4
 *.png
 *.jpg
 *.jpeg
 *.gif
 
-# EXCEPTION: Allow tracked images in the assets folder
+# Exception: Keep assets folder media
 !assets/*.png
 !assets/*.gif
 !assets/*.jpg
@@ -34,7 +39,12 @@ Thumbs.db
 # Logs
 *.log
 
-# IDE/editor config
+# Editor / IDE files
 .vscode/
 *.code-workspace
 .idea/
+
+# Archives & build artifacts
+*.tar
+*.gz
+*.zip
