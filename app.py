@@ -60,9 +60,9 @@ def main():
 
     # --- Sidebar inputs ---
     st.sidebar.markdown("### Basic Parameters")
-    pile_length = st.sidebar.slider("Pile Length (m)", min_value=100.0, max_value=300.0, value=100.0, step=10.0)
+    pile_length = st.sidebar.slider("Pile Length (m)", min_value=100.0, max_value=300.0, value=100.0, step=30.0)
     stacker_velocity = st.sidebar.slider("Stacker Velocity (m/min)", min_value=10.0, max_value=20.0, value=10.0, step=10.0)
-    production_rate = st.sidebar.slider("Production Rate (tons/hour)", min_value=300.0, max_value=900.0, value=600.0, step=100.0)
+    production_rate = st.sidebar.slider("Production Rate (tons/hour)", min_value=300.0, max_value=1200.0, value=600.0, step=300.0)
     total_weight = st.sidebar.slider("Total Material (tons)", min_value=900.0, max_value=9000.0, value=900.0, step=900.0)
     truck_payload = st.sidebar.slider("Truck Payload (tons)", min_value=20.0, max_value=60.0, value=30.0, step=10.0)
 
