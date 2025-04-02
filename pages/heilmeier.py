@@ -1,6 +1,12 @@
 import streamlit as st
 from auth import login_required
 
+st.set_page_config(
+    page_title="Heilmeier",
+    page_icon="assets/icon.png",
+    layout="wide"
+)
+
 login_required()  # 🚨 Block access if not logged in
 
 st.title("Heilmeier Catechism")

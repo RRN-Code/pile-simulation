@@ -3,9 +3,12 @@ import numpy as np
 from simulation import PreHomogenizationPileSimulation
 from utils import get_deposit_pattern_truck
 from plotting import plot_final_pile, plot_grade_matrix
+import toml
+import os
+
 
 st.set_page_config(
-    page_title="Pile Simulation",
+    page_title="Simulation",
     page_icon="assets/icon.png",
     layout="wide"
 )
@@ -16,8 +19,19 @@ st.set_page_config(
 def login():
     st.markdown("<br><br><br><br>", unsafe_allow_html=True)
 
-    col1, col2, col3 = st.columns([1, 1, 1])
+    # Load secrets from the deployed path
+    if "auth" not in st.session_state:
+        if os.path.exists(".streamlit/secrets.toml"):
+            secrets = toml.load(".streamlit/secrets.toml")  # Local use
+            st.session_state.auth = secrets["auth"]
+        elif os.path.exists("secrets.toml"):
+            secrets = toml.load("secrets.toml")  # Render deployment
+            st.session_state.auth = secrets["auth"]
+        else:
+            st.error("Secrets file not found.")
+            st.stop()
 
+    col1, col2, col3 = st.columns([1, 1, 1])
     with col2:
         with st.form("login_form"):
             st.subheader("🔒 Login Required")
@@ -26,9 +40,8 @@ def login():
             submit = st.form_submit_button("Login")
 
             if submit:
-                # Read credentials from secrets.toml
-                stored_username = st.secrets["auth"]["username"]
-                stored_password = st.secrets["auth"]["password"]
+                stored_username = st.session_state.auth["username"]
+                stored_password = st.session_state.auth["password"]
 
                 if username == stored_username and password == stored_password:
                     st.session_state.logged_in = True
@@ -36,7 +49,6 @@ def login():
                     st.rerun()
                 else:
                     st.error("Invalid username or password ❌")
-
 
 
 # ----------------------------------------------------
